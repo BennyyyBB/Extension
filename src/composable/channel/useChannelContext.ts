@@ -13,6 +13,7 @@ export class ChannelContext implements CurrentChannel {
 	id = "";
 	username = "";
 	displayName = "";
+	peerChannelIds: string[] = [];
 	user?: SevenTV.User;
 	loaded = false;
 	setsFetched = false;
@@ -54,6 +55,12 @@ export class ChannelContext implements CurrentChannel {
 
 		this.fetch();
 		return true;
+	}
+
+	setPeerChannelIds(ids: string[]) {
+		if (this.peerChannelIds.length === ids.length &&
+			this.peerChannelIds.every((id, i) => id === ids[i])) return;
+		this.peerChannelIds = ids;
 	}
 
 	leave(): void {

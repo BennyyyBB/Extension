@@ -112,6 +112,55 @@ const ignoreClearChat = useConfig<boolean>("chat.ignore_clear_chat");
 const currentChannel = ref<CurrentChannel | null>(null);
 const sharedChannels = new Map<string, ChannelContext>();
 
+function syncSharedChannels(map: Map<string, Twitch.SharedChat> | null | undefined) {
+	const incoming = new Set<string>();
+	if (map) {
+		for (const [channelID, data] of map.entries()) {
+			if (channelID === ctx.id) continue;
+			if (data?.status && data.status !== "ACTIVE") continue;
+			incoming.add(channelID);
+
+			if (!sharedChannels.has(channelID)) {
+				sharedChannels.set(channelID, useChannelContext(channelID, false));
+			}
+		}
+	}
+
+	for (const [channelID, peerCtx] of sharedChannels) {
+		if (incoming.has(channelID)) continue;
+		peerCtx.leave();
+		sharedChannels.delete(channelID);
+	}
+
+	ctx.setPeerChannelIds([...incoming]);
+}
+
+const sharedChatDataByChannelID = ref<Map<string, Twitch.SharedChat> | null>(null);
+watch(
+	presentation,
+	(inst, old) => {
+		if (!inst || !inst.component) return;
+
+		if (old && old.component && inst !== old) {
+			unsetPropertyHook(old.component, "props");
+			return;
+		}
+
+		definePropertyHook(inst.component, "props", {
+			value(v) {
+				sharedChatDataByChannelID.value = v.sharedChatDataByChannelID;
+				syncSharedChannels(v.sharedChatDataByChannelID);
+			},
+		});
+	},
+	{ immediate: true },
+);
+
+watch(
+	() => ctx.id,
+	() => syncSharedChannels(sharedChatDataByChannelID.value),
+);
+
 // get the config chat.font-april-fools
 const fontAprilFools = useConfig("chat.font-april-fools-2026", false);
 
@@ -299,6 +348,9 @@ watch(
 						sharedChannels.set(channelID, useChannelContext(channelID, true));
 					}
 				}
+
+				// Update host channel context
+				ctx.setPeerChannelIds([...sharedChannels.keys()]);	
 			},
 		});
 	},
@@ -467,6 +519,10 @@ onBeforeUnmount(() => {
 onUnmounted(() => {
 	resizeObserver.disconnect();
 
+	for (const [, peerCtx] of sharedChannels) peerCtx.leave();
+	sharedChannels.clear();
+	ctx.setPeerChannelIds([]);
+	
 	el.remove();
 	if (replacedEl.value) replacedEl.value.classList.remove("seventv-checked");
 
