@@ -1,6 +1,6 @@
 <template />
 <script setup lang="ts">
-import { onUnmounted, ref, toRef } from "vue";
+import { computed, onUnmounted, ref, toRef } from "vue";
 import { useStore } from "@/store/main";
 import { ChatMessage } from "@/common/chat/ChatMessage";
 import { db } from "@/db/idb";
@@ -22,12 +22,14 @@ const { providers } = useStore();
 
 // query the channel's emote set bindings
 const channelSets = useLiveQuery(
-	() =>
-		db.channels
+	() => {
+		const ids= [ctx.id, ...ctx.peerChannelIds].filter(Boolean);
+		return db.channels
 			.where("id")
-			.anyOf([ctx.id, ...ctx.peerChannelIds])
+			.anyOf([ids])
 			.toArray()
-			.then((res) => res.flatMap((c) => c?.set_ids ?? [])),
+			.then((rows) => Array.from(new Set(rows.flatMap((c) => c?.set_ids ?? []))));
+	},
 	undefined,
 	{
 		reactives: [channelID, peerChannelIds],
@@ -85,7 +87,7 @@ useLiveQuery(
 
 function onEmoteSetUpdated(ev: WorkletEvent<"emote_set_updated">) {
 	const { id, emotes_added, emotes_removed, emotes_updated, user } = ev.detail;
-	if (!channelSets.value?.includes(id)) return; // not a channel emote set
+	if (!channelSets.value?.includes(id) && !emotes.sets[id]) return; // not a channel emote set
 
 	const set = emotes.sets[id];
 

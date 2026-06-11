@@ -108,7 +108,7 @@ function getMessageComponent(type: MessageType) {
 const onMessage = (msgData: Twitch.AnyMessage): boolean => {
 	const msg = new ChatMessage(msgData.id);
 
-	msg.channelID = ctx.id;
+	msg.sourceChannelID = ctx.id;
 
 	// Send message to our registered message handlers
 	messages.handlers.forEach((h) => h(msgData));
@@ -168,16 +168,16 @@ function onChatMessage(msg: ChatMessage, msgData: Twitch.AnyMessage, shouldRende
 	let sourceRoomID =
 		msgData.sourceRoomID ?? msgData.sharedChat?.sourceRoomID ?? msgData.message?.sourceRoomID ?? null;
 	if (!sourceRoomID && msgData.nonce) {
-		sourceRoomID = msg.channelID;
+		sourceRoomID = msg.sourceChannelID;
 	}
 
-	if (hideSharedChat.value && msg.channelID != sourceRoomID) {
+	if (hideSharedChat.value && msg.sourceChannelID != sourceRoomID) {
 		return;
 	}
 
 	if (sourceRoomID && !hideSharedChat.value) {
 		msgData.sourceData = sharedChatData.value?.get(sourceRoomID);
-		msg.setSourceData(msgData.sourceData);
+		msg.setSourceData(msgData.sourceData, sourceRoomID ?? undefined);
 	}
 
 	// define message author

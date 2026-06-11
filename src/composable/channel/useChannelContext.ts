@@ -57,10 +57,12 @@ export class ChannelContext implements CurrentChannel {
 		return true;
 	}
 
-	setPeerChannelIds(ids: string[]) {
-		if (this.peerChannelIds.length === ids.length &&
-			this.peerChannelIds.every((id, i) => id === ids[i])) return;
-		this.peerChannelIds = ids;
+	setPeerChannelIds(ids: string[]): boolean {
+		const a = [...new Set(ids)].sort();
+		const b = [...this.peerChannelIds].sort();
+		if (a.length === b.length && a.every((v, i) => v === b[i])) return false;
+		this.peerChannelIds = a;
+		return true;
 	}
 
 	leave(): void {

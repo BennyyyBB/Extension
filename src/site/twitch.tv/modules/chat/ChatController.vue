@@ -103,6 +103,7 @@ const scroller = useChatScroller(ctx, {
 });
 const properties = useChatProperties(ctx);
 const tools = useChatTools(ctx);
+const sharedChatEmotes = useConfig<boolean>("chat.shared_chat_emotes");
 
 // line limit
 const lineLimit = useConfig("chat.line_limit", 150);
@@ -111,55 +112,6 @@ const ignoreClearChat = useConfig<boolean>("chat.ignore_clear_chat");
 // Defines the current channel for hooking
 const currentChannel = ref<CurrentChannel | null>(null);
 const sharedChannels = new Map<string, ChannelContext>();
-
-function syncSharedChannels(map: Map<string, Twitch.SharedChat> | null | undefined) {
-	const incoming = new Set<string>();
-	if (map) {
-		for (const [channelID, data] of map.entries()) {
-			if (channelID === ctx.id) continue;
-			if (data?.status && data.status !== "ACTIVE") continue;
-			incoming.add(channelID);
-
-			if (!sharedChannels.has(channelID)) {
-				sharedChannels.set(channelID, useChannelContext(channelID, false));
-			}
-		}
-	}
-
-	for (const [channelID, peerCtx] of sharedChannels) {
-		if (incoming.has(channelID)) continue;
-		peerCtx.leave();
-		sharedChannels.delete(channelID);
-	}
-
-	ctx.setPeerChannelIds([...incoming]);
-}
-
-const sharedChatDataByChannelID = ref<Map<string, Twitch.SharedChat> | null>(null);
-watch(
-	presentation,
-	(inst, old) => {
-		if (!inst || !inst.component) return;
-
-		if (old && old.component && inst !== old) {
-			unsetPropertyHook(old.component, "props");
-			return;
-		}
-
-		definePropertyHook(inst.component, "props", {
-			value(v) {
-				sharedChatDataByChannelID.value = v.sharedChatDataByChannelID;
-				syncSharedChannels(v.sharedChatDataByChannelID);
-			},
-		});
-	},
-	{ immediate: true },
-);
-
-watch(
-	() => ctx.id,
-	() => syncSharedChannels(sharedChatDataByChannelID.value),
-);
 
 // get the config chat.font-april-fools
 const fontAprilFools = useConfig("chat.font-april-fools-2026", false);
@@ -329,6 +281,40 @@ definePropertyHook(controller.value.component, "props", {
 });
 
 const sharedChatDataByChannelID = ref<Map<string, Twitch.SharedChat> | null>(null);
+
+function syncSharedChannels() {
+	const data = sharedChatDataByChannelID.value;
+	const incoming = new Set<string>();
+	
+	if (sharedChatEmotes.value && data) {
+		for (const [channelID, sc] of data.entries()) {
+			if (channelID === ctx.id)  continue;
+			if (sc.status && sc.status !== "ACTIVE") continue;
+			incoming.add(channelID);
+
+			if(!sharedChannels.has(channelID)) {
+				const peerCtx = useChannelContext(channelID, false);
+				peerCtx.setCurrentChannel({
+					id: channelID,
+					username: sc.login ?? "",
+					displayName: sc.displayName ?? "",
+					active: true,
+				});
+				sharedChannels.set(channelID, peerCtx);
+			}
+		}
+	}
+
+	// Remove channels that are no longer shared
+	for (const [channelID, peerCtx] of sharedChannels) {
+		if (incoming.has(channelID)) continue;
+		peerCtx.leave();
+		sharedChannels.delete(channelID);
+		}
+
+	ctx.setPeerChannelIds([...incoming]);
+}
+
 watch(
 	presentation,
 	(inst, old) => {
@@ -342,6 +328,7 @@ watch(
 		definePropertyHook(inst.component, "props", {
 			value(v) {
 				sharedChatDataByChannelID.value = v.sharedChatDataByChannelID;
+				syncSharedChannels();
 
 				for (const channelID of sharedChatDataByChannelID.value.keys()) {
 					if (!sharedChannels.has(channelID) && channelID != ctx.id) {
@@ -356,6 +343,16 @@ watch(
 	},
 	{ immediate: true },
 );
+
+watch([sharedChatEmotes, () => ctx.id], () => syncSharedChannels());
+
+onBeforeUnmount(() => {
+	for (const [channelID, peerCtx] of sharedChannels) {
+		peerCtx.leave();
+		sharedChannels.delete(channelID);
+	}
+	ctx.setPeerChannelIds([]);
+});
 
 const a = awaitComponents<Twitch.MessageCardOpeners>({
 	parentSelector: ".stream-chat",

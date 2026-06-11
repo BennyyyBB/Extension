@@ -149,6 +149,14 @@ export const config = [
 		hint: "Show text pollution from BTTV and FFZ emote modifiers (!w, ffzHyper, etc.). Modifiers are not supported yet, this setting only affects the display of their text form",
 		defaultValue: false,
 	}),
+
+	declareConfig("chat.shared_chat_emotes", "TOGGLE", {
+		path: ["Chat", "Shared Chat"],
+		label: "Emotes from Shared Chat Channels",
+		hint: "Show 7TV/FFZ/BTTV emotes from every participating channel in Twitch Shared Chat session, instead of only the channel you're currently watching.",
+		defaultValue: true,
+	}),
+
 	declareConfig("chat.mod_slider", "TOGGLE", {
 		path: ["Chat", "Moderation"],
 		label: "Mod Slider",

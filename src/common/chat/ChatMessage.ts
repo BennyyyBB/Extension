@@ -9,7 +9,7 @@ export class ChatMessage<C extends ComponentFactory = ComponentFactory> {
 	public id: string;
 	public body = "";
 	public author: ChatUser | null = null;
-	public channelID = "";
+	public sourceChannelID = "";
 	public sourceData: Twitch.SharedChat | undefined;
 	private component?: C | null = null;
 	public componentProps?: InstanceType<C>["$props"] | null = null;
@@ -98,8 +98,9 @@ export class ChatMessage<C extends ComponentFactory = ComponentFactory> {
 		this.id = id;
 	}
 
-	public setSourceData(sourceData: Twitch.SharedChat | undefined): void {
+	public setSourceData(sourceData: Twitch.SharedChat | undefined, sourceRoomID?: string): void {
 		this.sourceData = sourceData;
+		if (sourceRoomID) this.sourceChannelID = sourceRoomID;
 	}
 
 	public setHighlight(color: string, label: string): void {

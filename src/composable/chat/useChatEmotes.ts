@@ -76,6 +76,25 @@ export function useChatEmotes(ctx: ChannelContext) {
 		return null;
 	}
 
+	function activeForSender(senderChannelID?: string): Record<string, SevenTV.ActiveEmote> {
+		if (!x) return {};
+		if (!senderChannelID) return x.active;
+
+		const out: Record<string, SevenTV.ActiveEmote> = {...x.active};
+		for (const provider of Object.values(x.providers)) {
+			for (const set of Object.values(provider)) {
+				for (const e of set.emotes) {
+					const ownerId = (e.data as any)?.owner?.connections?.find?.(
+						(c: any) => c.platform === "TWITCH" && c.id === senderChannelID)
+					?.id;
+					if (ownerId) out[e.name] = e;
+				}
+			}
+		}
+
+		return out;
+	}
+
 	const r = reactive({
 		active: x.active,
 		sets: x.sets,
@@ -84,6 +103,7 @@ export function useChatEmotes(ctx: ChannelContext) {
 		reset,
 		byProvider,
 		find,
+		activeForSender
 	});
 
 	return r;

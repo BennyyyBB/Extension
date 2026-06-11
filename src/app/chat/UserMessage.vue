@@ -98,6 +98,7 @@ import { log } from "@/common/Logger";
 import type { AnyToken, ChatMessage, ChatUser } from "@/common/chat/ChatMessage";
 import { IsEmoteToken, IsLinkToken, IsMentionToken } from "@/common/type-predicates/MessageTokens";
 import { useChannelContext } from "@/composable/channel/useChannelContext";
+import { useChatEmotes } from "@/composable/chat/useChatEmotes";
 import { useChatModeration } from "@/composable/chat/useChatModeration";
 import { useChatProperties } from "@/composable/chat/useChatProperties";
 import { useChatTools } from "@/composable/chat/useChatTools";
@@ -144,6 +145,7 @@ const { openViewerCard } = useChatTools(ctx);
 const { pinChatMessage } = useChatModeration(ctx, msg.value.author?.username ?? "");
 
 const emoteScale = useConfig<number>("chat.emote_scale");
+const emotesStore = useChatEmotes(ctx);
 
 // TODO: css variables
 const meStyle = useConfig<number>("chat.slash_me_style");
@@ -169,9 +171,14 @@ const tokens = ref<MessageTokenOrText[]>([]);
 function doTokenize() {
 	if (!tokenizer) return;
 
+	const emoteMap =
+		props.msg.sourceChannelID && props.msg.sourceChannelID !== ctx.id
+			? emotesStore.activeForSender(props.msg.sourceChannelID)
+			: (props.emotes ?? {});
+
 	const newTokens = tokenizer.tokenize({
 		chatterMap: props.chatters ?? {},
-		emoteMap: props.emotes ?? {},
+		emoteMap,
 		localEmoteMap: { ...cosmetics.emotes, ...props.msg.nativeEmotes },
 		showModifiers: showModifiers.value,
 	});
