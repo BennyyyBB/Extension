@@ -173,8 +173,8 @@ function doTokenize() {
 
 	const emoteMap =
 		props.msg.sourceChannelID && props.msg.sourceChannelID !== ctx.id
-			? emotesStore.activeForSender(props.msg.sourceChannelID)
-			: (props.emotes ?? {});
+			? emotesStore.activeForSender()
+			: props.emotes ?? {};
 
 	const newTokens = tokenizer.tokenize({
 		chatterMap: props.chatters ?? {},

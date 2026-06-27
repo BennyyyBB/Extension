@@ -76,23 +76,11 @@ export function useChatEmotes(ctx: ChannelContext) {
 		return null;
 	}
 
-	function activeForSender(senderChannelID?: string): Record<string, SevenTV.ActiveEmote> {
+	function activeForSender(): Record<string, SevenTV.ActiveEmote> {
 		if (!x) return {};
-		if (!senderChannelID) return x.active;
-
-		const out: Record<string, SevenTV.ActiveEmote> = {...x.active};
-		for (const provider of Object.values(x.providers)) {
-			for (const set of Object.values(provider)) {
-				for (const e of set.emotes) {
-					const ownerId = (e.data as any)?.owner?.connections?.find?.(
-						(c: any) => c.platform === "TWITCH" && c.id === senderChannelID)
-					?.id;
-					if (ownerId) out[e.name] = e;
-				}
-			}
-		}
-
-		return out;
+		// All peer-channel emote sets are already merged into x.active via peerChannelIds,
+		// so we can return the full active map regardless of sender.
+		return x.active;
 	}
 
 	const r = reactive({
@@ -103,7 +91,7 @@ export function useChatEmotes(ctx: ChannelContext) {
 		reset,
 		byProvider,
 		find,
-		activeForSender
+		activeForSender,
 	});
 
 	return r;

@@ -1,6 +1,6 @@
 <template />
 <script setup lang="ts">
-import { computed, onUnmounted, ref, toRef } from "vue";
+import { onUnmounted, ref, toRef } from "vue";
 import { useStore } from "@/store/main";
 import { ChatMessage } from "@/common/chat/ChatMessage";
 import { db } from "@/db/idb";
@@ -23,10 +23,10 @@ const { providers } = useStore();
 // query the channel's emote set bindings
 const channelSets = useLiveQuery(
 	() => {
-		const ids= [ctx.id, ...ctx.peerChannelIds].filter(Boolean);
+		const ids = [ctx.id, ...ctx.peerChannelIds].filter(Boolean);
 		return db.channels
 			.where("id")
-			.anyOf([ids])
+			.anyOf(ids)
 			.toArray()
 			.then((rows) => Array.from(new Set(rows.flatMap((c) => c?.set_ids ?? []))));
 	},
@@ -46,10 +46,12 @@ useLiveQuery(
 			.equals("GLOBAL")
 			.sortBy("priority"),
 	(sets) => {
-		// reset the third-party emote providers
-		emotes.providers["7TV"] = {};
-		emotes.providers["FFZ"] = {};
-		emotes.providers["BTTV"] = {};
+		// reset the third-party emote providers (delete keys in-place to preserve reactivity)
+		for (const provider of ["7TV", "FFZ", "BTTV"] as const) {
+			for (const setId in emotes.providers[provider]) {
+				delete emotes.providers[provider][setId];
+			}
+		}
 
 		if (!sets) return;
 
@@ -133,13 +135,8 @@ function onEmoteSetUpdated(ev: WorkletEvent<"emote_set_updated">) {
 
 		delete emotes.active[e.name];
 		if (emotes.sets[id]) {
-			const i = set.emotes.findIndex((e) => e.id === emote.id);
-			if (i !== -1) set.emotes.splice(i, 1);
-		}
-
-		if (emotes.sets[id]) {
-			const i = set.emotes.findIndex((e) => e.id === emote.id);
-			if (i !== -1) set.emotes.splice(i, 1);
+			const idx = set.emotes.findIndex((ae) => ae.id === emote.id);
+			if (idx !== -1) set.emotes.splice(idx, 1);
 		}
 	}
 

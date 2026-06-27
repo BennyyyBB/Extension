@@ -285,14 +285,14 @@ const sharedChatDataByChannelID = ref<Map<string, Twitch.SharedChat> | null>(nul
 function syncSharedChannels() {
 	const data = sharedChatDataByChannelID.value;
 	const incoming = new Set<string>();
-	
+
 	if (sharedChatEmotes.value && data) {
 		for (const [channelID, sc] of data.entries()) {
-			if (channelID === ctx.id)  continue;
+			if (channelID === ctx.id) continue;
 			if (sc.status && sc.status !== "ACTIVE") continue;
 			incoming.add(channelID);
 
-			if(!sharedChannels.has(channelID)) {
+			if (!sharedChannels.has(channelID)) {
 				const peerCtx = useChannelContext(channelID, false);
 				peerCtx.setCurrentChannel({
 					id: channelID,
@@ -310,7 +310,7 @@ function syncSharedChannels() {
 		if (incoming.has(channelID)) continue;
 		peerCtx.leave();
 		sharedChannels.delete(channelID);
-		}
+	}
 
 	ctx.setPeerChannelIds([...incoming]);
 }
@@ -329,15 +329,6 @@ watch(
 			value(v) {
 				sharedChatDataByChannelID.value = v.sharedChatDataByChannelID;
 				syncSharedChannels();
-
-				for (const channelID of sharedChatDataByChannelID.value.keys()) {
-					if (!sharedChannels.has(channelID) && channelID != ctx.id) {
-						sharedChannels.set(channelID, useChannelContext(channelID, true));
-					}
-				}
-
-				// Update host channel context
-				ctx.setPeerChannelIds([...sharedChannels.keys()]);	
 			},
 		});
 	},
@@ -519,7 +510,7 @@ onUnmounted(() => {
 	for (const [, peerCtx] of sharedChannels) peerCtx.leave();
 	sharedChannels.clear();
 	ctx.setPeerChannelIds([]);
-	
+
 	el.remove();
 	if (replacedEl.value) replacedEl.value.classList.remove("seventv-checked");
 
